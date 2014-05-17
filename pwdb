@@ -17,7 +17,6 @@
 
 dir="${HOME}/.pwdb"
 name=
-version="0.1"
 
 usage() {
 	echo "usage: ${0##*/} [-a name] [-r name] [-s name] [-lv]"
@@ -25,38 +24,36 @@ usage() {
 }
 
 version() {
-	echo "${0##*/} ${version}"
+	echo "${0##*/} 0.1"
 	exit 0
 }
 
 encrypt_db() {
 	echo "Encrypting pwdb database."
 	reop -A -m "${dir}/pwdb.db" -p "${dir}/key.pub"
+	[[ $? > 0 ]] && exit 1
 	rm "${dir}/pwdb.db"
 }
 
 decrypt_db() {
 	echo "Decrypting pwdb database (passpharse required)."
 	reop -D -m "${dir}/pwdb.db" -s "${dir}/key.sec"
-	rm "${dir}/pwdb.db.enc"
+	[[ $? > 0 ]] && exit 1
 }
 
 init() {
-	if [[ ! -d "${dir}" ]]; then
-		echo "Initializing db and key pair."
-		mkdir -m 0700 -p "${dir}"
+	mkdir -m 0700 -p "${dir}"
 
-		if [[ ! -f "${dir}/key.pub" ]]; then
-			echo "Creating reop keypair."
-			reop -G -p "${dir}/key.pub" -s "${dir}/key.sec"
-		fi
+	if [[ ! -f "${dir}/key.pub" || ! -f "${dir}/key.sec" ]]; then
+		echo "Initializing reop keypair and pwdb database."
 
-		if [[ ! -f "${dir}/pwdb.db.enc" ]]; then
-			echo "CREATE TABLE IF NOT EXISTS passwords (
-			      id integer primary key autoincrement,
-			      name text unique,
-			      password text);" | sqlite3 "${dir}/pwdb.db"
-		fi
+		reop -G -p "${dir}/key.pub" -s "${dir}/key.sec"
+		[[ $? > 0 ]] && exit 1
+
+		echo "CREATE TABLE IF NOT EXISTS passwords (
+		      id integer primary key autoincrement,
+		      name text unique,
+		      password text);" | sqlite3 "${dir}/pwdb.db"
 
 		return 0
 	fi
@@ -85,7 +82,13 @@ show() {
 	set -A vals $res
 
 	echo
-	echo "Stored password for ${name}: ${vals[2]}"
+
+	if [[ -z $res ]]; then
+		echo "No password found for ${name}"
+        else
+		echo "Stored password for ${name}: ${vals[2]}"
+	fi
+
 	echo
 
 	encrypt_db
