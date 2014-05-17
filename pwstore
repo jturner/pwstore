@@ -19,7 +19,7 @@ dir="${HOME}/.pwstore"
 label=
 
 usage() {
-	echo "usage: ${0##*/} [-a label] [-d label] [-s label] [-lv]"
+	echo "usage: ${0##*/} [-lv] [-a] [-d] label"
 	exit 1
 }
 
@@ -128,7 +128,7 @@ add() {
 	exit 0
 }
 
-remove() {
+delete() {
 	init; [[ $? == 0 ]] || decrypt_db
 
 	echo "DELETE FROM passwords WHERE label = '${label}';" | sqlite3 "${dir}/pwstore.db"
@@ -138,17 +138,19 @@ remove() {
 	exit 0
 }
 
-while getopts "a:hlr:s:v" opt; do
+while getopts "a:d:hlv" opt; do
 	case $opt in
 	a)	label=$OPTARG; add;;
+	d)	label=$OPTARG; delete;;
 	l)	list;;
-	r)	label=$OPTARG; remove;;
-	s)	label=$OPTARG; show;;
 	v)	version;;
 	h|*)	usage;;
 	esac
 done
 shift $((OPTIND-1))
-[ $# = 0 ] || usage
 
-[ $OPTIND = 1 ] && usage
+if [[ $# == 1 ]]; then
+	label=$1; show
+else
+	usage
+fi
