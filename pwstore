@@ -16,10 +16,10 @@
 #
 
 dir="${HOME}/.pwstore"
-name=
+label=
 
 usage() {
-	echo "usage: ${0##*/} [-a name] [-r name] [-s name] [-lv]"
+	echo "usage: ${0##*/} [-a label] [-d label] [-s label] [-lv]"
 	exit 1
 }
 
@@ -52,7 +52,7 @@ init() {
 
 		echo "CREATE TABLE IF NOT EXISTS passwords (
 		      id integer primary key autoincrement,
-		      name text unique,
+		      label text unique,
 		      password text);" | sqlite3 "${dir}/pwstore.db"
 
 		return 0
@@ -66,7 +66,7 @@ list() {
 
 	echo
 	echo "Passwords currently being stored for:"
-	echo "SELECT name FROM passwords ORDER BY name ASC;" | sqlite3 "${dir}/pwstore.db"
+	echo "SELECT label FROM passwords ORDER BY label ASC;" | sqlite3 "${dir}/pwstore.db"
 	echo
 
 	encrypt_db
@@ -77,16 +77,16 @@ list() {
 show() {
 	init; [[ $? == 0 ]] || decrypt_db
 
-	res=$(echo "SELECT * FROM passwords WHERE name = '${name}';" | sqlite3 "${dir}/pwstore.db")
+	res=$(echo "SELECT * FROM passwords WHERE label = '${label}';" | sqlite3 "${dir}/pwstore.db")
 	IFS="|"
 	set -A vals $res
 
 	echo
 
 	if [[ -z $res ]]; then
-		echo "No password found for ${name}"
+		echo "No password found for ${label}"
         else
-		echo "Stored password for ${name}: ${vals[2]}"
+		echo "Stored password for ${label}: ${vals[2]}"
 	fi
 
 	echo
@@ -101,14 +101,14 @@ add() {
 	echo
 
 	while :; do
-		echo -n "New password for ${name} (will not echo): "
+		echo -n "New password for ${label} (will not echo): "
 		stty -echo
 		read resp
 		local _password=$resp
 		stty echo
 		echo
 
-		echo -n "New password for ${name} (again): "
+		echo -n "New password for ${label} (again): "
 		stty -echo
 		read resp
 		stty echo
@@ -119,8 +119,8 @@ add() {
 		echo "Passwords do not match, try again."
 	done
 
-	echo "INSERT OR REPLACE INTO passwords (name, password)
-	      values ('${name}', '${_password}');" | sqlite3 "${dir}/pwstore.db"
+	echo "INSERT OR REPLACE INTO passwords (label, password)
+	      values ('${label}', '${_password}');" | sqlite3 "${dir}/pwstore.db"
 
 	echo
 	encrypt_db
@@ -131,7 +131,7 @@ add() {
 remove() {
 	init; [[ $? == 0 ]] || decrypt_db
 
-	echo "DELETE FROM passwords WHERE name = '${name}';" | sqlite3 "${dir}/pwstore.db"
+	echo "DELETE FROM passwords WHERE label = '${label}';" | sqlite3 "${dir}/pwstore.db"
 
 	encrypt_db
 
@@ -140,10 +140,10 @@ remove() {
 
 while getopts "a:hlr:s:v" opt; do
 	case $opt in
-	a)	name=$OPTARG; add;;
+	a)	label=$OPTARG; add;;
 	l)	list;;
-	r)	name=$OPTARG; remove;;
-	s)	name=$OPTARG; show;;
+	r)	label=$OPTARG; remove;;
+	s)	label=$OPTARG; show;;
 	v)	version;;
 	h|*)	usage;;
 	esac
