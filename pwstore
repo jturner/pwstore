@@ -17,6 +17,7 @@
 
 dir="${HOME}/.pwstore"
 label=
+method=usage
 override=0
 
 usage() {
@@ -71,8 +72,6 @@ list() {
 	echo
 
 	encrypt_db
-
-	exit 0
 }
 
 show() {
@@ -93,8 +92,6 @@ show() {
 	echo
 
 	encrypt_db
-
-	exit 0
 }
 
 add() {
@@ -136,8 +133,6 @@ add() {
 
 	echo
 	encrypt_db
-
-	exit 0
 }
 
 delete() {
@@ -146,15 +141,13 @@ delete() {
 	echo "DELETE FROM passwords WHERE label = '${label}';" | sqlite3 "${dir}/pwstore.db"
 
 	encrypt_db
-
-	exit 0
 }
 
 while getopts "a:d:hlov" opt; do
 	case $opt in
-	a)	label=$OPTARG; add;;
-	d)	label=$OPTARG; delete;;
-	l)	list;;
+	a)	label=$OPTARG; method=add;;
+	d)	label=$OPTARG; method=delete;;
+	l)	method=list;;
 	o)	override=1;;
 	v)	version;;
 	h|*)	usage;;
@@ -165,5 +158,5 @@ shift $((OPTIND-1))
 if [[ $# == 1 ]]; then
 	label=$1; show
 else
-	usage
+	$method
 fi
