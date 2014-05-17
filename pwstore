@@ -21,7 +21,7 @@ method=usage
 override=0
 
 usage() {
-	echo "usage: ${0##*/} [-lv] [-o] [-a] [-d] label"
+	echo "usage: ${0##*/} [-lov] [-a | -d] [label]"
 	exit 1
 }
 
@@ -32,14 +32,14 @@ version() {
 
 encrypt_db() {
 	echo "Encrypting pwstore database."
-	reop -A -m "${dir}/pwstore.db" -p "${dir}/key.pub"
+	reop -E -m "${dir}/pwstore.db" -p "${dir}/key.pub" -s "${dir}/key.sec"
 	[[ $? > 0 ]] && exit 1
 	rm "${dir}/pwstore.db"
 }
 
 decrypt_db() {
 	echo "Decrypting pwstore database (passpharse required)."
-	reop -D -m "${dir}/pwstore.db" -s "${dir}/key.sec"
+	reop -D -m "${dir}/pwstore.db" -p "${dir}/key.pub" -s "${dir}/key.sec"
 	[[ $? > 0 ]] && exit 1
 }
 
@@ -102,7 +102,7 @@ add() {
 		echo -n "New password for ${label} (will not echo): "
 		stty -echo
 		read resp
-		local _password=$resp
+		local password=$resp
 		stty echo
 		echo
 
@@ -112,23 +112,27 @@ add() {
 		stty echo
 		echo
 
-		[[ $resp == "${_password}" ]] && break
+		[[ $resp == "${password}" && -n "${password}" ]] && break
 
-		echo "Passwords do not match, try again."
+		if [[ -z "${password}" ]]; then
+			echo "Password is blank, try again."
+		else
+			echo "Passwords do not match, try again."
+		fi
 	done
 
 	local res=$(echo "SELECT id FROM passwords WHERE label = '${label}';" | sqlite3 "${dir}/pwstore.db")
 
 	if [[ -n $res ]]; then
 		if [[ $override == 1 ]]; then
-			echo "UPDATE passwords set password = '${_password}' WHERE id = ${res};" | sqlite3 "${dir}/pwstore.db"
+			echo "UPDATE passwords set password = '${password}' WHERE id = ${res};" | sqlite3 "${dir}/pwstore.db"
 		else
 			echo
 			echo "Password already exists for that label, use -o to override."
 		fi
 	else
 		echo "INSERT INTO passwords (label, password)
-		      values ('${label}', '${_password}');" | sqlite3 "${dir}/pwstore.db"
+		      values ('${label}', '${password}');" | sqlite3 "${dir}/pwstore.db"
 	fi
 
 	echo
