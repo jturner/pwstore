@@ -32,7 +32,7 @@ version() {
 
 encrypt_db() {
 	echo "Encrypting pwstore database."
-	reop -E -m "${dir}/pwstore.db" -p "${dir}/key.pub" -s "${dir}/key.sec"
+	reop -A -m "${dir}/pwstore.db" -p "${dir}/key.pub" -s "${dir}/key.sec"
 	[[ $? > 0 ]] && exit 1
 	rm "${dir}/pwstore.db"
 }
