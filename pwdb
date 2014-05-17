@@ -1,0 +1,151 @@
+#!/bin/ksh
+#
+# Copyright (c) 2014 James Turner <james@calminferno.net>
+#
+# Permission to use, copy, modify, and distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+
+dir="${HOME}/.pwdb"
+name=
+version="0.1"
+
+usage() {
+	echo "usage: ${0##*/} [-a name] [-r name] [-s name] [-lv]"
+	exit 1
+}
+
+version() {
+	echo "${0##*/} ${version}"
+	exit 0
+}
+
+encrypt_db() {
+	echo "Encrypting pwdb database."
+	reop -A -m "${dir}/pwdb.db" -p "${dir}/key.pub"
+	rm "${dir}/pwdb.db"
+}
+
+decrypt_db() {
+	echo "Decrypting pwdb database (passpharse required)."
+	reop -D -m "${dir}/pwdb.db" -s "${dir}/key.sec"
+	rm "${dir}/pwdb.db.enc"
+}
+
+init() {
+	if [[ ! -d "${dir}" ]]; then
+		echo "Initializing db and key pair."
+		mkdir -m 0700 -p "${dir}"
+
+		if [[ ! -f "${dir}/key.pub" ]]; then
+			echo "Creating reop keypair."
+			reop -G -p "${dir}/key.pub" -s "${dir}/key.sec"
+		fi
+
+		if [[ ! -f "${dir}/pwdb.db.enc" ]]; then
+			echo "CREATE TABLE IF NOT EXISTS passwords (
+			      id integer primary key autoincrement,
+			      name text unique,
+			      password text);" | sqlite3 "${dir}/pwdb.db"
+		fi
+
+		return 0
+	fi
+
+	return 1
+}
+
+list() {
+	init; [[ $? == 0 ]] || decrypt_db
+
+	echo
+	echo "Passwords currently being stored for:"
+	echo "SELECT name FROM passwords ORDER BY name ASC;" | sqlite3 "${dir}/pwdb.db"
+	echo
+
+	encrypt_db
+
+	exit 0
+}
+
+show() {
+	init; [[ $? == 0 ]] || decrypt_db
+
+	res=$(echo "SELECT * FROM passwords WHERE name = '${name}';" | sqlite3 "${dir}/pwdb.db")
+	IFS="|"
+	set -A vals $res
+
+	echo
+	echo "Stored password for ${name}: ${vals[2]}"
+	echo
+
+	encrypt_db
+
+	exit 0
+}
+
+add() {
+	init; [[ $? == 0 ]] || decrypt_db
+	echo
+
+	while :; do
+		echo -n "New password for ${name} (will not echo): "
+		stty -echo
+		read resp
+		local _password=$resp
+		stty echo
+		echo
+
+		echo -n "New password for ${name} (again): "
+		stty -echo
+		read resp
+		stty echo
+		echo
+
+		[[ $resp == "${_password}" ]] && break
+
+		echo "Passwords do not match, try again."
+	done
+
+	echo "INSERT OR REPLACE INTO passwords (name, password)
+	      values ('${name}', '${_password}');" | sqlite3 "${dir}/pwdb.db"
+
+	echo
+	encrypt_db
+
+	exit 0
+}
+
+remove() {
+	init; [[ $? == 0 ]] || decrypt_db
+
+	echo "DELETE FROM passwords WHERE name = '${name}';" | sqlite3 "${dir}/pwdb.db"
+
+	encrypt_db
+
+	exit 0
+}
+
+while getopts "a:hlr:s:v" opt; do
+	case $opt in
+	a)	name=$OPTARG; add;;
+	l)	list;;
+	r)	name=$OPTARG; remove;;
+	s)	name=$OPTARG; show;;
+	v)	version;;
+	h|*)	usage;;
+	esac
+done
+shift $((OPTIND-1))
+[ $# = 0 ] || usage
+
+[ $OPTIND = 1 ] && usage
