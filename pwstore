@@ -17,9 +17,10 @@
 
 dir="${HOME}/.pwstore"
 label=
+override=0
 
 usage() {
-	echo "usage: ${0##*/} [-lv] [-a] [-d] label"
+	echo "usage: ${0##*/} [-lv] [-o] [-a] [-d] label"
 	exit 1
 }
 
@@ -77,7 +78,7 @@ list() {
 show() {
 	init; [[ $? == 0 ]] || decrypt_db
 
-	res=$(echo "SELECT * FROM passwords WHERE label = '${label}';" | sqlite3 "${dir}/pwstore.db")
+	local res=$(echo "SELECT * FROM passwords WHERE label = '${label}';" | sqlite3 "${dir}/pwstore.db")
 	IFS="|"
 	set -A vals $res
 
@@ -119,8 +120,19 @@ add() {
 		echo "Passwords do not match, try again."
 	done
 
-	echo "INSERT OR REPLACE INTO passwords (label, password)
-	      values ('${label}', '${_password}');" | sqlite3 "${dir}/pwstore.db"
+	local res=$(echo "SELECT id FROM passwords WHERE label = '${label}';" | sqlite3 "${dir}/pwstore.db")
+
+	if [[ -n $res ]]; then
+		if [[ $override == 1 ]]; then
+			echo "UPDATE passwords set password = '${_password}' WHERE id = ${res};" | sqlite3 "${dir}/pwstore.db"
+		else
+			echo
+			echo "Password already exists for that label, use -o to override."
+		fi
+	else
+		echo "INSERT INTO passwords (label, password)
+		      values ('${label}', '${_password}');" | sqlite3 "${dir}/pwstore.db"
+	fi
 
 	echo
 	encrypt_db
@@ -138,11 +150,12 @@ delete() {
 	exit 0
 }
 
-while getopts "a:d:hlv" opt; do
+while getopts "a:d:hlov" opt; do
 	case $opt in
 	a)	label=$OPTARG; add;;
 	d)	label=$OPTARG; delete;;
 	l)	list;;
+	o)	override=1;;
 	v)	version;;
 	h|*)	usage;;
 	esac
