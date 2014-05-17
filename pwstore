@@ -15,7 +15,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-dir="${HOME}/.pwdb"
+dir="${HOME}/.pwstore"
 name=
 
 usage() {
@@ -29,15 +29,15 @@ version() {
 }
 
 encrypt_db() {
-	echo "Encrypting pwdb database."
-	reop -A -m "${dir}/pwdb.db" -p "${dir}/key.pub"
+	echo "Encrypting pwstore database."
+	reop -A -m "${dir}/pwstore.db" -p "${dir}/key.pub"
 	[[ $? > 0 ]] && exit 1
-	rm "${dir}/pwdb.db"
+	rm "${dir}/pwstore.db"
 }
 
 decrypt_db() {
-	echo "Decrypting pwdb database (passpharse required)."
-	reop -D -m "${dir}/pwdb.db" -s "${dir}/key.sec"
+	echo "Decrypting pwstore database (passpharse required)."
+	reop -D -m "${dir}/pwstore.db" -s "${dir}/key.sec"
 	[[ $? > 0 ]] && exit 1
 }
 
@@ -45,7 +45,7 @@ init() {
 	mkdir -m 0700 -p "${dir}"
 
 	if [[ ! -f "${dir}/key.pub" || ! -f "${dir}/key.sec" ]]; then
-		echo "Initializing reop keypair and pwdb database."
+		echo "Initializing reop keypair and pwstore database."
 
 		reop -G -p "${dir}/key.pub" -s "${dir}/key.sec"
 		[[ $? > 0 ]] && exit 1
@@ -53,7 +53,7 @@ init() {
 		echo "CREATE TABLE IF NOT EXISTS passwords (
 		      id integer primary key autoincrement,
 		      name text unique,
-		      password text);" | sqlite3 "${dir}/pwdb.db"
+		      password text);" | sqlite3 "${dir}/pwstore.db"
 
 		return 0
 	fi
@@ -66,7 +66,7 @@ list() {
 
 	echo
 	echo "Passwords currently being stored for:"
-	echo "SELECT name FROM passwords ORDER BY name ASC;" | sqlite3 "${dir}/pwdb.db"
+	echo "SELECT name FROM passwords ORDER BY name ASC;" | sqlite3 "${dir}/pwstore.db"
 	echo
 
 	encrypt_db
@@ -77,7 +77,7 @@ list() {
 show() {
 	init; [[ $? == 0 ]] || decrypt_db
 
-	res=$(echo "SELECT * FROM passwords WHERE name = '${name}';" | sqlite3 "${dir}/pwdb.db")
+	res=$(echo "SELECT * FROM passwords WHERE name = '${name}';" | sqlite3 "${dir}/pwstore.db")
 	IFS="|"
 	set -A vals $res
 
@@ -120,7 +120,7 @@ add() {
 	done
 
 	echo "INSERT OR REPLACE INTO passwords (name, password)
-	      values ('${name}', '${_password}');" | sqlite3 "${dir}/pwdb.db"
+	      values ('${name}', '${_password}');" | sqlite3 "${dir}/pwstore.db"
 
 	echo
 	encrypt_db
@@ -131,7 +131,7 @@ add() {
 remove() {
 	init; [[ $? == 0 ]] || decrypt_db
 
-	echo "DELETE FROM passwords WHERE name = '${name}';" | sqlite3 "${dir}/pwdb.db"
+	echo "DELETE FROM passwords WHERE name = '${name}';" | sqlite3 "${dir}/pwstore.db"
 
 	encrypt_db
 
