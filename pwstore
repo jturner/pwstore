@@ -32,24 +32,24 @@ version() {
 
 encrypt_db() {
 	echo "Encrypting pwstore database."
-	reop -A -m "${dir}/pwstore.db" -p "${dir}/key.pub" -s "${dir}/key.sec"
+	reop -A -m "${dir}/pwstore.db" -p "${dir}/pubkey" -s "${dir}/seckey"
 	[[ $? > 0 ]] && exit 1
 	rm "${dir}/pwstore.db"
 }
 
 decrypt_db() {
 	echo "Decrypting pwstore database (passpharse required)."
-	reop -D -m "${dir}/pwstore.db" -p "${dir}/key.pub" -s "${dir}/key.sec"
+	reop -D -m "${dir}/pwstore.db" -p "${dir}/pubkey" -s "${dir}/seckey"
 	[[ $? > 0 ]] && exit 1
 }
 
 init() {
 	mkdir -m 0700 -p "${dir}"
 
-	if [[ ! -f "${dir}/key.pub" || ! -f "${dir}/key.sec" ]]; then
+	if [[ ! -f "${dir}/pubkey" || ! -f "${dir}/seckey" ]]; then
 		echo "Initializing reop keypair and pwstore database."
 
-		reop -G -p "${dir}/key.pub" -s "${dir}/key.sec"
+		reop -G -p "${dir}/pubkey" -s "${dir}/seckey"
 		[[ $? > 0 ]] && exit 1
 
 		echo "CREATE TABLE IF NOT EXISTS passwords (
