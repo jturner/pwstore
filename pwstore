@@ -77,16 +77,13 @@ list() {
 show() {
 	init; [[ $? == 0 ]] || decrypt_db
 
-	local res=$(echo "SELECT * FROM passwords WHERE label = '${label}';" | sqlite3 "${dir}/pwstore.db")
-	IFS="|"
-	set -A vals $res
-
+	local password=$(echo "SELECT password FROM passwords WHERE label = '${label}';" | sqlite3 "${dir}/pwstore.db")
 	echo
 
-	if [[ -z $res ]]; then
-		echo "No password found for ${label}"
+	if [[ -z $password ]]; then
+		echo "No password found for ${label}."
         else
-		echo "Stored password for ${label}: ${vals[2]}"
+		echo "Stored password for ${label}: ${password}"
 	fi
 
 	echo
@@ -121,11 +118,11 @@ add() {
 		fi
 	done
 
-	local res=$(echo "SELECT id FROM passwords WHERE label = '${label}';" | sqlite3 "${dir}/pwstore.db")
+	local id=$(echo "SELECT id FROM passwords WHERE label = '${label}';" | sqlite3 "${dir}/pwstore.db")
 
-	if [[ -n $res ]]; then
+	if [[ -n $id ]]; then
 		if [[ $override == 1 ]]; then
-			echo "UPDATE passwords set password = '${password}' WHERE id = ${res};" | sqlite3 "${dir}/pwstore.db"
+			echo "UPDATE passwords set password = '${password}' WHERE id = ${id};" | sqlite3 "${dir}/pwstore.db"
 		else
 			echo
 			echo "Password already exists for that label, use -o to override."
