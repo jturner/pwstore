@@ -44,6 +44,7 @@ decrypt_db() {
 }
 
 init() {
+	local create=0
 	mkdir -m 0700 -p "${dir}"
 
 	if [[ ! -f "${dir}/pubkey" || ! -f "${dir}/seckey" ]]; then
@@ -52,6 +53,10 @@ init() {
 		reop -G -p "${dir}/pubkey" -s "${dir}/seckey"
 		[[ $? > 0 ]] && exit 1
 
+		create=1
+	fi
+
+	if [[ $create == 1 || ! -f "${dir}/pwstore.db.enc" ]]; then
 		echo "CREATE TABLE IF NOT EXISTS passwords (
 		      id integer primary key autoincrement,
 		      label text unique,
