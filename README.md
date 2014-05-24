@@ -4,7 +4,9 @@ pwstore
 pwstore is a simple ksh script that uses
 [reop](https://github.com/tedu/reop) and [SQLite3](http://sqlite.org/)
 to securely store your passwords in an encrypted database that can
-easily be backed up.
+easily be backed up. It can also utilize
+[pwgen](http://sourceforge.net/projects/pwgen/) to automatically
+generate "secure" passwords for you.
 
 Usage
 -----
