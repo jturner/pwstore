@@ -132,10 +132,11 @@ add() {
 	fi
 
 	local id=$(echo "SELECT id FROM passwords WHERE label = '${label}';" | sqlite3 "${dir}/pwstore.db")
+	local escaped_password=$(echo ${password} | sed "s/'/''/g")
 
 	if [[ -n $id ]]; then
 		if [[ $override == 1 ]]; then
-			echo "UPDATE passwords set password = '${password}' WHERE id = ${id};" | sqlite3 "${dir}/pwstore.db"
+			echo "UPDATE passwords set password = '${escaped_password}' WHERE id = ${id};" | sqlite3 "${dir}/pwstore.db"
 
 			if [[ $generate == 1 ]]; then
 				echo "Generated password for ${label}: ${password}"
@@ -145,7 +146,7 @@ add() {
 		fi
 	else
 		echo "INSERT INTO passwords (label, password)
-		      values ('${label}', '${password}');" | sqlite3 "${dir}/pwstore.db"
+		      values ('${label}', '${escaped_password}');" | sqlite3 "${dir}/pwstore.db"
 
 		if [[ $generate == 1 ]]; then
 			echo "Generated password for ${label}: ${password}"
