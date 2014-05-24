@@ -16,6 +16,10 @@ To add a new password:
 
     pwstore -a label
 
+To add and generate a new password:
+
+    pwstore -g -a label
+
 To view the password for *label*:
 
     pwstore label
