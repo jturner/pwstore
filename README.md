@@ -8,6 +8,8 @@ easily be backed up. It can also utilize
 [pwgen](http://sourceforge.net/projects/pwgen/) to automatically
 generate "secure" passwords for you.
 
+Project moved to sourcehut: https://git.sr.ht/~jturner/pwstore
+
 Usage
 -----
 
